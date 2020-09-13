@@ -7,17 +7,44 @@ import {
     IRequestConfig,
     IRequestMethod,
     IRequestOptions,
+    ResponseObject,
 } from '@cloudbase/adapter-interface';
+import { KV } from '@cloudbase/types';
 
 import * as fs from 'fs'
 import * as path from 'path';
 import {remote} from 'electron'
 
- 
+// this code segment is copied from the source code of official cloudbase jssdk
+let PROTOCOL = typeof location !== 'undefined' && location.protocol === 'http:' 
+  ? 'http:' 
+  : 'https:';
+
+// this code segment is copied from the source code of official cloudbase jssdk
+function formatUrl(PROTOCOL: string, url: string, query: KV<any> = {}): string {
+    const urlHasQuery = /\?/.test(url);
+    let queryString = '';
+    for (let key in query) {
+        if (queryString === '') {
+        !urlHasQuery && (url += '?');
+        } else {
+        queryString += '&';
+        }
+        queryString += `${key}=${encodeURIComponent(query[key])}`;
+    }
+    url += queryString;
+    if (/^http(s)?\:\/\//.test(url)) {
+        return url;
+    }
+    return `${PROTOCOL}${url}`;
+}
+
+// this code segment is copied from the source code of official cloudbase jssdk
 function isFormData(val: any): boolean {
     return Object.prototype.toString.call(val) === '[object FormData]';
 }
 
+// this code segment is copied from the source code of official cloudbase jssdk
 function toQueryString(query = {}) {
     let queryString = [];
     for (let key in query) {
@@ -62,12 +89,12 @@ class SDKRequestImpl extends AbstractSDKRequest{
     constructor(config: IRequestConfig={}) {
         super();
         const { timeout, timeoutMsg, restrictedMethods } = config;
-        this._timeout = timeout || 1000 * 15; //15 seconds default
+        this._timeout = timeout || 1000 * 20; //20 seconds default
         this._timeoutMsg = timeoutMsg || '请求超时';
         this._restrictedMethods = restrictedMethods || ['get', 'post', 'upload', 'download'];
     }
 
-    private _request(options: IRequestOptions): Promise<any>{
+    private _request_by_fetch(options: IRequestOptions): Promise<ResponseObject>{
         const method = options.method?.toUpperCase() || 'GET';
         return new Promise((resolve, reject) =>{
             const {url, data, body, headers={}} = options
@@ -132,31 +159,108 @@ class SDKRequestImpl extends AbstractSDKRequest{
         })
     }
 
-    private _request_with_timeout(options: IRequestOptions): Promise<any>{
+    // @ts-ignore
+    private _request_by_fetch_with_timeout(options: IRequestOptions): Promise<ResponseObject>{
         return Promise.race([
-            this._request(options),
-            new Promise(resolve => {
-                setTimeout(() => resolve(this._timeoutMsg), this._timeout)
+            this._request_by_fetch(options),
+            new Promise<ResponseObject>(resolve => {
+                console.warn(this._timeoutMsg)
+                setTimeout(() => resolve({msg: this._timeoutMsg}), this._timeout)
             })
         ])
     }
 
-    private request(options: IRequestOptions){
+    /**
+     * @param {IRequestOptions} options
+     * @param {boolean} enableAbort 是否超时中断请求
+     */
+    // this code segment is copied from the source code of official cloudbase jssdk
+    protected _request_by_xhr(options: IRequestOptions, enableAbort = false): Promise<ResponseObject> {
+        const method = (String(options.method)).toLowerCase() || 'get';
+        return new Promise(resolve => {
+            const { url, headers = {}, data, responseType, withCredentials, body, onUploadProgress } = options;
+            const realUrl = formatUrl(PROTOCOL, url!, method === 'get' ? data : {});
+
+            const ajax = new XMLHttpRequest();
+            ajax.open(method, realUrl);
+            responseType && (ajax.responseType = responseType);
+            for (const key in headers) {
+                ajax.setRequestHeader(key, headers[key]);
+            }
+            let timer;
+            if (onUploadProgress) {
+                ajax.addEventListener('progress', onUploadProgress);
+            }
+            ajax.onreadystatechange = () => {
+                const result: ResponseObject = {};
+                if (ajax.readyState === 4) {
+                    let headers = ajax.getAllResponseHeaders();
+                    let arr = headers.trim().split(/[\r\n]+/);
+                    // Create a map of header names to values
+                    let headerMap = {};
+                    arr.forEach(function (line) {
+                        let parts = line.split(': ');
+                        let header = parts.shift()!.toLowerCase();
+                        let value = parts.join(': ');
+                        headerMap[header] = value;
+                    });
+                    result.header = headerMap;
+                    result.statusCode = ajax.status;
+                    try {
+                        // 上传post请求返回数据格式为xml，此处容错
+                        result.data = responseType === 'blob' ? ajax.response : JSON.parse(ajax.responseText);
+                    } catch (e) {
+                        result.data = responseType === 'blob' ? ajax.response : ajax.responseText;
+                    }
+                    clearTimeout(timer);
+                    // console.log("result", result);
+                    resolve(result);
+                }
+            };
+            if (enableAbort && this._timeout) {
+                timer = setTimeout(() => {
+                console.warn(this._timeoutMsg);
+                ajax.abort();
+                }, this._timeout);
+            }
+            // 处理 payload
+            let payload;
+            if (isFormData(data)) {
+                // FormData，不处理
+                payload = data;
+            } else if (headers['content-type'] === 'application/x-www-form-urlencoded') {
+                payload = toQueryString(data);
+            } else if (body) {
+                payload = body;
+            } else {
+                // 其它情况
+                payload = data ? JSON.stringify(data) : undefined;
+            }
+
+            if (withCredentials) {
+                ajax.withCredentials = true;
+            }
+            ajax.send(payload);
+        });
+    }
+
+    private _request(options: IRequestOptions){
         let method = options.method?.toLowerCase() || 'get'
         // @ts-ignore
         let restricted = this._restrictedMethods.includes(method)
-        return restricted? this._request_with_timeout(options) : this._request(options)
+        // return restricted? this._request_by_fetch_with_timeout(options) : this._request_by_fetch(options)
+        return this._request_by_xhr(options, restricted)
     }
 
-    public async post(options: IRequestOptions){
+    public post(options: IRequestOptions){
         // console.log("post options", options);
-        return this.request({
+        return this._request({
             ...options,
             method: 'POST',
         })
     }
 
-    public async upload(options: IRequestOptions) {
+    public upload(options: IRequestOptions) {
         // console.log("upload options", options);
         const {data, file, name} = options
         const formData = new FormData();
@@ -166,7 +270,7 @@ class SDKRequestImpl extends AbstractSDKRequest{
         formData.append('key', name);
         let fileContent = fs.readFileSync(file)
         formData.append('file', new File( [fileContent], name ));
-        return this.request({
+        return this._request({
             ...options,
             data: formData,
             method: 'POST',
@@ -179,12 +283,14 @@ class SDKRequestImpl extends AbstractSDKRequest{
 
     public download(options: IRequestOptions){
         // console.log("download options", options);
-        return this.request(options).then(data => {
-            // console.log('data', data)
+        return this._request(options).then(resp => {
+            // console.log('data', resp)
             const userDataPath = remote.app.getPath('userData')
+            let filePath = path.join(userDataPath, 'tmp')
+            if(!fs.existsSync(filePath)) fs.mkdirSync(filePath)
             const fileName = decodeURIComponent(options.url?.split('/').pop() || (new Date()).valueOf() + '' )
-            const filePath = path.join(userDataPath, 'tmp', fileName)
-            fs.writeFileSync(filePath, data)
+            filePath = path.join(filePath, fileName)
+            fs.writeFileSync(filePath, resp.data)
             return {
                 code:'SUCCESS',
                 status:200,
@@ -193,7 +299,7 @@ class SDKRequestImpl extends AbstractSDKRequest{
             }
         })
         .catch(err =>{
-            // console.log(err)
+            console.error(err)
             return err
         })
     }

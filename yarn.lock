@@ -828,10 +828,17 @@
     lodash "^4.17.19"
     to-fast-properties "^2.0.0"
 
-"@cloudbase/adapter-interface@^0.4.1":
+"@cloudbase/adapter-interface@^0.4.0", "@cloudbase/adapter-interface@^0.4.1":
   version "0.4.1"
   resolved "https://registry.npm.taobao.org/@cloudbase/adapter-interface/download/@cloudbase/adapter-interface-0.4.1.tgz#92c37e1a844d0964dd686806c70cb00e6ccabae2"
   integrity sha1-ksN+GoRNCWTdaGgGxwywDmzKuuI=
+
+"@cloudbase/types@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.npm.taobao.org/@cloudbase/types/download/@cloudbase/types-1.1.0.tgz#9c1873b29f26b79c3ad57ce3ec5a75b5c0b806d0"
+  integrity sha1-nBhzsp8mt5w61Xzj7Fp1tcC4BtA=
+  dependencies:
+    "@cloudbase/adapter-interface" "^0.4.0"
 
 "@electron/get@^1.0.1":
   version "1.12.2"

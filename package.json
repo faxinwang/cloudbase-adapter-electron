@@ -1,18 +1,24 @@
 {
   "name": "cloudbase-adapter-electron",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "tencent cloudbase adapter for electron",
   "main": "./dist/index.js",
   "author": "faxinwang <1094828998@qq.com>",
   "license": "MIT",
   "private": false,
-  "keywords": ["cloudbase","adapter","electron","tcb"],
+  "keywords": [
+    "cloudbase",
+    "adapter",
+    "electron",
+    "tcb"
+  ],
   "scripts": {
     "build:esm": "tsc -p tsconfig.esm.json",
     "build": "webpack && yarn build:esm"
   },
   "dependencies": {
     "@cloudbase/adapter-interface": "^0.4.1",
+    "@cloudbase/types": "^1.1.0",
     "electron": "^10.1.1"
   },
   "devDependencies": {
