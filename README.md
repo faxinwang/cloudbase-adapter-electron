@@ -1,6 +1,7 @@
 # cloudbase-adapter-electron
-[![NPM Version](https://img.shields.io/npm/v/@cloudbase/js-sdk.svg?style=flat)](https://www.npmjs.com/package/@cloudbase/js-sdk)
-[![](https://img.shields.io/npm/dt/@cloudbase/js-sdk.svg)](https://www.npmjs.com/package/@cloudbase/js-sdk)
+
+[![NPM Version](https://img.shields.io/npm/v/cloudbase-adapter-electron.svg?style=flat)](https://www.npmjs.com/package/cloudbase-adapter-electron)
+[![](https://img.shields.io/npm/dt/cloudbase-adapter-electron.svg)](https://www.npmjs.com/package/cloudbase-adapter-electron)
 
 腾讯云开发 @cloudbase/js-sdk 的 electron 适配器, 运行于electron的渲染进程中.
 
