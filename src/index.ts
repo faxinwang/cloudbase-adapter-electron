@@ -94,81 +94,81 @@ class SDKRequestImpl extends AbstractSDKRequest{
         this._restrictedMethods = restrictedMethods || ['get', 'post', 'upload', 'download'];
     }
 
-    private _request_by_fetch(options: IRequestOptions): Promise<ResponseObject>{
-        const method = options.method?.toUpperCase() || 'GET';
-        return new Promise((resolve, reject) =>{
-            const {url, data, body, headers={}} = options
-            // let hasQueryString = false
-            let payload: BodyInit = ''
-            const contentType = headers["content-type"] || headers["Content-Type"] || ""
-            if(isFormData(data)){
-                payload = data as FormData
-            }else if(contentType === 'application/x-www-form-urlencoded'){
-                payload = toQueryString(data)
-                // hasQueryString = true
-            }else if(data){
-                payload = JSON.stringify(data)
-            }else if(body){
-                payload = body
-            }
-            let config = {
-                method,
-                headers: {
-                    mode: 'cors',
-                    ...headers
-                },
-                body: payload
-            }
-            if(['GET','HEAD'].includes(method)){
-                delete config.body
-            }
-            fetch(url!, config).then(response => {
-                // console.log("response", response)
-                // console.log("response headers", response.headers)
-                if(!response.ok) reject(response)
-                else{
-                    try{
-                        let conType = response.headers['content-type'] || response.headers['Content-Type'] || ''
-                        if(conType === 'application/json'){
-                            return response.json()
-                        }else if(conType.startsWith("image")){
-                            return response.blob()
-                        }else if(conType.startsWith("text") || conType===''){
-                            return response.text()
-                        }else{
-                            return response.blob()
-                        }
-                    }catch(err){
-                        console.error('response err', err)
-                    }
-                }
-            })
-            .then(data => {
-                if(typeof data === 'string'){
-                    try{
-                        data = JSON.parse(data)
-                        // console.log("json data", data)
-                    }catch(err){}
-                }
-                resolve({
-                    status:200,
-                    statusCode: 200,
-                    data,
-                })
-            })
-        })
-    }
+    // private _request_by_fetch(options: IRequestOptions): Promise<ResponseObject>{
+    //     const method = options.method?.toUpperCase() || 'GET';
+    //     return new Promise((resolve, reject) =>{
+    //         const {url, data, body, headers={}} = options
+    //         // let hasQueryString = false
+    //         let payload: BodyInit = ''
+    //         const contentType = headers["content-type"] || headers["Content-Type"] || ""
+    //         if(isFormData(data)){
+    //             payload = data as FormData
+    //         }else if(contentType === 'application/x-www-form-urlencoded'){
+    //             payload = toQueryString(data)
+    //             // hasQueryString = true
+    //         }else if(data){
+    //             payload = JSON.stringify(data)
+    //         }else if(body){
+    //             payload = body
+    //         }
+    //         let config = {
+    //             method,
+    //             headers: {
+    //                 mode: 'cors',
+    //                 ...headers
+    //             },
+    //             body: payload
+    //         }
+    //         if(['GET','HEAD'].includes(method)){
+    //             delete config.body
+    //         }
+    //         fetch(url!, config).then(response => {
+    //             // console.log("response", response)
+    //             // console.log("response headers", response.headers)
+    //             if(!response.ok) reject(response)
+    //             else{
+    //                 try{
+    //                     let conType = response.headers['content-type'] || response.headers['Content-Type'] || ''
+    //                     if(conType === 'application/json'){
+    //                         return response.json()
+    //                     }else if(conType.startsWith("image")){
+    //                         return response.blob()
+    //                     }else if(conType.startsWith("text") || conType===''){
+    //                         return response.text()
+    //                     }else{
+    //                         return response.blob()
+    //                     }
+    //                 }catch(err){
+    //                     console.error('response err', err)
+    //                 }
+    //             }
+    //         })
+    //         .then(data => {
+    //             if(typeof data === 'string'){
+    //                 try{
+    //                     data = JSON.parse(data)
+    //                     // console.log("json data", data)
+    //                 }catch(err){}
+    //             }
+    //             resolve({
+    //                 status:200,
+    //                 statusCode: 200,
+    //                 data,
+    //             })
+    //         })
+    //     })
+    // }
 
-    // @ts-ignore
-    private _request_by_fetch_with_timeout(options: IRequestOptions): Promise<ResponseObject>{
-        return Promise.race([
-            this._request_by_fetch(options),
-            new Promise<ResponseObject>(resolve => {
-                console.warn(this._timeoutMsg)
-                setTimeout(() => resolve({msg: this._timeoutMsg}), this._timeout)
-            })
-        ])
-    }
+    // // @ts-ignore
+    // private _request_by_fetch_with_timeout(options: IRequestOptions): Promise<ResponseObject>{
+    //     return Promise.race([
+    //         this._request_by_fetch(options),
+    //         new Promise<ResponseObject>(resolve => {
+    //             console.warn(this._timeoutMsg)
+    //             setTimeout(() => resolve({msg: this._timeoutMsg}), this._timeout)
+    //         })
+    //     ])
+    // }
 
     /**
      * @param {IRequestOptions} options

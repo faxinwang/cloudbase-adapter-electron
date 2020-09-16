@@ -2,3 +2,7 @@
 .github
 node_modules
 src
+tsconfig.esm.json
+tsconfig.json
+webpack.config.js
+yarn.lock
