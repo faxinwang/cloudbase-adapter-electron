@@ -24,7 +24,12 @@ import electron_adapter from 'cloudbase-adapter-electron'
 cloudbase.useAdapters(electron_adapter);
 
 const tcb = cloudbase.init({
-  env: "env-xxxx",
+  env: "your envId",
+  appSign: 'your appSign',
+  appSecret: {
+    appAccessKeyId: 'your appAccessKeyId',
+    appAccessKey: 'your appAccessKey',
+  }
 });
 
 ```
