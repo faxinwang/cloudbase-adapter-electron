@@ -13,7 +13,8 @@ import { KV } from '@cloudbase/types';
 
 import * as fs from 'fs'
 import * as path from 'path';
-import {remote} from 'electron'
+import * as os from 'os'
+// import {remote} from 'electron'
 
 // this code segment is copied from the source code of official cloudbase jssdk
 let PROTOCOL = typeof location !== 'undefined' && location.protocol === 'http:' 
@@ -70,16 +71,15 @@ function isMatch(){
     if(!sessionStorage || typeof sessionStorage !== 'object'){
         return false
     }
-    if(!fs || !path || !remote){
+    if(!fs || !path || !os){
         return false
     }
     return true
 }
 
-// console.log("isMatch", isMatch())
+console.log("isMatch", isMatch())
 
 class SDKRequestImpl extends AbstractSDKRequest{
-    // 默认不限超时
     private readonly _timeout: number;
     // 超时提示文案
     private readonly _timeoutMsg: string;
@@ -120,10 +120,11 @@ class SDKRequestImpl extends AbstractSDKRequest{
     //             body: payload
     //         }
     //         if(['GET','HEAD'].includes(method)){
-    //             delete config.body
+    //             // delete config.body
+    //             config.body = ""
     //         }
     //         fetch(url!, config).then(response => {
-    //             // console.log("response", response)
+    //             console.log("response", response)
     //             // console.log("response headers", response.headers)
     //             if(!response.ok) reject(response)
     //             else{
@@ -139,7 +140,7 @@ class SDKRequestImpl extends AbstractSDKRequest{
     //                         return response.blob()
     //                     }
     //                 }catch(err){
-    //                     console.error('response err', err)
+    //                     console.log('response err', err)
     //                 }
     //             }
     //         })
@@ -159,7 +160,6 @@ class SDKRequestImpl extends AbstractSDKRequest{
     //     })
     // }
 
-    // // @ts-ignore
     // private _request_by_fetch_with_timeout(options: IRequestOptions): Promise<ResponseObject>{
     //     return Promise.race([
     //         this._request_by_fetch(options),
@@ -206,6 +206,7 @@ class SDKRequestImpl extends AbstractSDKRequest{
                     });
                     result.header = headerMap;
                     result.statusCode = ajax.status;
+                    if(!result.code) result.code="SUCCESS";
                     try {
                         // 上传post请求返回数据格式为xml，此处容错
                         result.data = responseType === 'blob' ? ajax.response : JSON.parse(ajax.responseText);
@@ -213,7 +214,6 @@ class SDKRequestImpl extends AbstractSDKRequest{
                         result.data = responseType === 'blob' ? ajax.response : ajax.responseText;
                     }
                     clearTimeout(timer);
-                    // console.log("result", result);
                     resolve(result);
                 }
             };
@@ -283,14 +283,13 @@ class SDKRequestImpl extends AbstractSDKRequest{
 
     public download(options: IRequestOptions){
         // console.log("download options", options);
-        return this._request(options).then(resp => {
+        return this._request({...options,  crossDomain:true}).then(resp => {
             // console.log('data', resp)
-            const userDataPath = remote.app.getPath('userData')
-            let filePath = path.join(userDataPath, 'tmp')
-            if(!fs.existsSync(filePath)) fs.mkdirSync(filePath)
-            const fileName = decodeURIComponent(options.url?.split('/').pop() || (new Date()).valueOf() + '' )
-            filePath = path.join(filePath, fileName)
-            fs.writeFileSync(filePath, resp.data)
+            const tmpPath = path.join(os.tmpdir(),"electron");
+            if(!fs.existsSync(tmpPath)) fs.mkdirSync(tmpPath);
+            const fileName = decodeURIComponent(options.url?.split('/').pop() || (new Date()).valueOf() + '' );
+            const filePath = path.join(tmpPath, fileName);
+            fs.writeFileSync(filePath, resp.data);
             return {
                 code:'SUCCESS',
                 status:200,
@@ -299,7 +298,7 @@ class SDKRequestImpl extends AbstractSDKRequest{
             }
         })
         .catch(err =>{
-            console.error(err)
+            console.log(err)
             return err
         })
     }

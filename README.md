@@ -34,22 +34,32 @@ const tcb = cloudbase.init({
 
 ```
 
-### main process
-
-从electron 10 开始, `enableRemoteModule` 默认值为false, 由于适配器中使用了 `remote` 模块的 `remote.app.getPath()`, 因此需要在主进程中启用remote模块. electron版本小于10的则不需要该设置.
-
-```javascript
-let mainWindow = new BrowserWindow({
-  width: 1000,
-  height: 600,
-  webPreferences: {
-    enableRemoteModule: true,
-  }
-});
-```
-
 ## 注意
 
-该软件包实现了适配器中的post接口和upload接口, download接口还有一点问题. 不过已经可以使用云开发的登录认证, 文件上传, 数据库等服务了. 欢迎大家提交pr一起完善这个适配器. 
+该适配器实现了SDK中的post接口和upload接口, download虽已实现，但是通过SDK中的downloadFile函数下载文件会失败. 
 
-另外, 可以直接下载src/index.ts文件, 修改为合适的名字后放到项目中直接使用(以相对路径的方式引入), 从而方便打印调试信息.
+虽然downloadFile函数下载文件会报错， 但是可以通过getTempFileURL先拿到基于https的下载链接，然后通过该链接进行下载. 代码如下：
+
+```typescript
+const cloudFilePath = "cloud file ID"
+tcb.getTempFileURL({
+  fileList:[cloudFilePath],
+})
+.then(async res=>{
+  const item = res.fileList && res.fileList[0]
+  if(item){
+    let url:string = item.download_url || item.tempFileURL;
+    const resp = await fetch(url);
+    if(resp.ok){
+      const jsonData = await resp.json();
+      // ...
+      return jsonData;
+    }
+  }
+})
+```
+
+## notes: 
+
+1. 新版的适配器移除了electron依赖。
+1. 方便打印调试信息，可以直接下载src/index.ts文件, 修改为合适的名字后放到项目中直接使用(以相对路径的方式引入)。
