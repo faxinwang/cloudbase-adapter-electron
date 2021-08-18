@@ -57,7 +57,7 @@ API时，你需要使用在 preload script 里面通过 contextBridge 暴露到�
  */
 export function uploadFile(filePath:string, cloudPath:string){
   // 
-  const fileContent:string = read_file_using_your_own_method(filePath);
+  const fileContent:string|ArrayBuffer = read_file_using_your_own_method(filePath);
   // @ts-ignore
   window._upload_file_content = fileContent;
   return tcb.uploadFile({
@@ -71,6 +71,9 @@ export function uploadFile(filePath:string, cloudPath:string){
   .catch(err=>{
     console.error(err);
     return {ok: false, err};
+  })
+  .finally(()=>{
+    window._upload_file_content = null;
   })
 }
 ```
