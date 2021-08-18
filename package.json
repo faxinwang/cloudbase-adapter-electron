@@ -1,7 +1,9 @@
 {
   "name": "cloudbase-adapter-electron",
-  "version": "1.0.5",
+  "version": "1.0.7",
   "description": "tencent cloudbase adapter for electron",
+  "type": "module",
+  "typings": "./dist/index.d.ts",
   "exports": {
     "require": "./dist/index.cjs.js",
     "import": "./dist/index.js"

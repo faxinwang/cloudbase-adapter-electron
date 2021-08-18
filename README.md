@@ -73,7 +73,7 @@ export function uploadFile(filePath:string, cloudPath:string){
     return {ok: false, err};
   })
   .finally(()=>{
-    window._upload_file_content = null;
+    window._upload_file_content = "";
   })
 }
 ```
