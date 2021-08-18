@@ -1,4 +1,4 @@
-import { 
+import {
     SDKAdapterInterface,
     AbstractSDKRequest,
     StorageType,
@@ -11,25 +11,21 @@ import {
 } from '@cloudbase/adapter-interface';
 import { KV } from '@cloudbase/types';
 
-import * as fs from 'fs'
-import * as path from 'path';
-import * as os from 'os'
-// import {remote} from 'electron'
 
 // this code segment is copied from the source code of official cloudbase jssdk
-let PROTOCOL = typeof location !== 'undefined' && location.protocol === 'http:' 
-  ? 'http:' 
-  : 'https:';
+let PROTOCOL = typeof location !== 'undefined' && location.protocol === 'http:'
+    ? 'http:'
+    : 'https:';
 
 // this code segment is copied from the source code of official cloudbase jssdk
-function formatUrl(PROTOCOL: string, url: string, query: KV<any> = {}): string {
+function formatUrl (PROTOCOL: string, url: string, query: KV<any> = {}): string {
     const urlHasQuery = /\?/.test(url);
     let queryString = '';
     for (let key in query) {
         if (queryString === '') {
-        !urlHasQuery && (url += '?');
+            !urlHasQuery && (url += '?');
         } else {
-        queryString += '&';
+            queryString += '&';
         }
         queryString += `${key}=${encodeURIComponent(query[key])}`;
     }
@@ -41,12 +37,12 @@ function formatUrl(PROTOCOL: string, url: string, query: KV<any> = {}): string {
 }
 
 // this code segment is copied from the source code of official cloudbase jssdk
-function isFormData(val: any): boolean {
+function isFormData (val: any): boolean {
     return Object.prototype.toString.call(val) === '[object FormData]';
 }
 
 // this code segment is copied from the source code of official cloudbase jssdk
-function toQueryString(query = {}) {
+function toQueryString (query = {}) {
     let queryString = [];
     for (let key in query) {
         // @ts-ignore
@@ -55,23 +51,20 @@ function toQueryString(query = {}) {
     return queryString.join('&');
 }
 
-function isMatch(){
-    if(!window || typeof window !== 'object'){
+function isMatch () {
+    if (!window || typeof window !== 'object') {
         return false
     }
-    if(!window.fetch || typeof window.fetch !== 'function'){
+    if (!XMLHttpRequest|| typeof XMLHttpRequest !== 'function') {
         return false
     }
-    if(!WebSocket || typeof WebSocket !== 'function'){
+    if (!WebSocket || typeof WebSocket !== 'function') {
         return false
     }
-    if(!localStorage || typeof localStorage !== 'object'){
+    if (!localStorage || typeof localStorage !== 'object') {
         return false
     }
-    if(!sessionStorage || typeof sessionStorage !== 'object'){
-        return false
-    }
-    if(!fs || !path || !os){
+    if (!sessionStorage || typeof sessionStorage !== 'object') {
         return false
     }
     return true
@@ -79,14 +72,14 @@ function isMatch(){
 
 console.log("isMatch", isMatch())
 
-class SDKRequestImpl extends AbstractSDKRequest{
+class SDKRequestImpl extends AbstractSDKRequest {
     private readonly _timeout: number;
     // 超时提示文案
     private readonly _timeoutMsg: string;
     // 超时受限请求类型，默认所有请求均受限
     private readonly _restrictedMethods: IRequestMethod[];
 
-    constructor(config: IRequestConfig={}) {
+    constructor(config: IRequestConfig = {}) {
         super();
         const { timeout, timeoutMsg, restrictedMethods } = config;
         this._timeout = timeout || 1000 * 20; //20 seconds default
@@ -175,7 +168,7 @@ class SDKRequestImpl extends AbstractSDKRequest{
      * @param {boolean} enableAbort 是否超时中断请求
      */
     // this code segment is copied from the source code of official cloudbase jssdk
-    protected _request_by_xhr(options: IRequestOptions, enableAbort = false): Promise<ResponseObject> {
+    protected _request_by_xhr (options: IRequestOptions, enableAbort = false): Promise<ResponseObject> {
         const method = (String(options.method)).toLowerCase() || 'get';
         return new Promise(resolve => {
             const { url, headers = {}, data, responseType, withCredentials, body, onUploadProgress } = options;
@@ -206,7 +199,7 @@ class SDKRequestImpl extends AbstractSDKRequest{
                     });
                     result.header = headerMap;
                     result.statusCode = ajax.status;
-                    if(!result.code) result.code="SUCCESS";
+                    if (!result.code) result.code = "SUCCESS";
                     try {
                         // 上传post请求返回数据格式为xml，此处容错
                         result.data = responseType === 'blob' ? ajax.response : JSON.parse(ajax.responseText);
@@ -219,8 +212,8 @@ class SDKRequestImpl extends AbstractSDKRequest{
             };
             if (enableAbort && this._timeout) {
                 timer = setTimeout(() => {
-                console.warn(this._timeoutMsg);
-                ajax.abort();
+                    console.warn(this._timeoutMsg);
+                    ajax.abort();
                 }, this._timeout);
             }
             // 处理 payload
@@ -244,7 +237,7 @@ class SDKRequestImpl extends AbstractSDKRequest{
         });
     }
 
-    private _request(options: IRequestOptions){
+    private _request (options: IRequestOptions) {
         let method = options.method?.toLowerCase() || 'get'
         // @ts-ignore
         let restricted = this._restrictedMethods.includes(method)
@@ -252,7 +245,7 @@ class SDKRequestImpl extends AbstractSDKRequest{
         return this._request_by_xhr(options, restricted)
     }
 
-    public post(options: IRequestOptions){
+    public post (options: IRequestOptions) {
         // console.log("post options", options);
         return this._request({
             ...options,
@@ -260,51 +253,54 @@ class SDKRequestImpl extends AbstractSDKRequest{
         })
     }
 
-    public upload(options: IRequestOptions) {
+    public upload (options: IRequestOptions) {
         // console.log("upload options", options);
-        const {data, file, name} = options
+        const { data, name } = options
         const formData = new FormData();
-        for(let key in data){
+        for (const key in data) {
             formData.append(key, data[key])
         }
         formData.append('key', name);
-        let fileContent = fs.readFileSync(file)
-        formData.append('file', new File( [fileContent], name ));
+        // @ts-ignore
+        const fileContent = window._upload_file_content;
+        formData.append('file', new File([fileContent], name));
         return this._request({
             ...options,
             data: formData,
             method: 'POST',
-        }).then( resp => {
-            if(resp.statusCode === 200) resp.statusCode = 201
-            return resp
         })
-        
+        // .then( resp => {
+        //     if(resp.statusCode === 200) resp.statusCode = 201
+        //     return resp
+        // })
+
     }
 
-    public download(options: IRequestOptions){
+    // @ts-ignore
+    public download (options: IRequestOptions) {
         // console.log("download options", options);
-        return this._request({...options,  crossDomain:true}).then(resp => {
-            // console.log('data', resp)
-            const tmpPath = path.join(os.tmpdir(),"electron");
-            if(!fs.existsSync(tmpPath)) fs.mkdirSync(tmpPath);
-            const fileName = decodeURIComponent(options.url?.split('/').pop() || (new Date()).valueOf() + '' );
-            const filePath = path.join(tmpPath, fileName);
-            fs.writeFileSync(filePath, resp.data);
-            return {
-                code:'SUCCESS',
-                status:200,
-                statusCode: 200,
-                tempFilePath: filePath
-            }
-        })
-        .catch(err =>{
-            console.log(err)
-            return err
-        })
+        // return this._request({...options,  crossDomain:true}).then(resp => {
+        //     // console.log('data', resp)
+        //     const tmpPath = path.join(os.tmpdir(),"electron");
+        //     if(!fs.existsSync(tmpPath)) fs.mkdirSync(tmpPath);
+        //     const fileName = decodeURIComponent(options.url?.split('/').pop() || (new Date()).valueOf() + '' );
+        //     const filePath = path.join(tmpPath, fileName);
+        //     fs.writeFileSync(filePath, resp.data);
+        //     return {
+        //         code:'SUCCESS',
+        //         status:200,
+        //         statusCode: 200,
+        //         tempFilePath: filePath
+        //     }
+        // })
+        // .catch(err =>{
+        //     console.log(err)
+        //     return err
+        // })
     }
 }
 
-function genAdapter(){
+function genAdapter () {
     const adapter: SDKAdapterInterface = {
         root: window,
         localStorage,
@@ -323,5 +319,5 @@ const adapter = {
     runtime: 'electron_renderer_process',
 }
 
-export {adapter};
+export { adapter };
 export default adapter;
